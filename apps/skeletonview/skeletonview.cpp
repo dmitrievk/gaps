@@ -94,11 +94,11 @@ static MergeCandidate *candidates = NULL;
 static int show_bbox = 1;
 static int show_skeleton = 1;
 static int show_merge_candidate = 1;
+static int show_legend = 1;
 static unsigned int segmentation_index = 1;
 static unsigned int candidate_index = 0;
 static unsigned int ncandidates;
 static RNScalar downsample_rate = 6.0;
-
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -530,6 +530,47 @@ static void DrawSegmentations(void)
 }
 
 
+static void GLUTDrawText(const R2Point& position, const char *s)
+{
+   // draw text string s at position
+   glRasterPos2d(position[0], position[1]);
+   while (*s) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *(s++));
+}
+
+// Draw a legend in the lower-left corner
+static void DrawLegend(void)
+{
+   // set projection matrix
+   glMatrixMode(GL_PROJECTION);
+   glPushMatrix();
+   glLoadIdentity();
+   gluOrtho2D(0, GLUTwindow_width, 0, GLUTwindow_height);
+
+   // set model view matrix
+   glMatrixMode(GL_MODELVIEW);
+   glPushMatrix();
+   glLoadIdentity();
+
+   if (show_merge_candidate) {
+       GLUTDrawText(R2Point(10, 170), "Showing merge candidates");
+       GLUTDrawText(R2Point(10, 150), "Ground truth candidates are blue and green");
+       GLUTDrawText(R2Point(10, 130), "Other candidates are red and yellow");
+
+       GLUTDrawText(R2Point(10, 90), "C - show single neurons");      
+   } 
+   else {
+       GLUTDrawText(R2Point(10, 130), "Showing single neurons");
+
+       GLUTDrawText(R2Point(10, 90), "C - show merge candidates"); 
+   }
+
+   GLUTDrawText(R2Point(10, 70), "L - show/hide legend");    
+   GLUTDrawText(R2Point(10, 50), "B - show/hide box");
+   GLUTDrawText(R2Point(10, 30), "S - show/hide skeleton");
+   GLUTDrawText(R2Point(10, 10), "W - show/hide image data/segmentations (X, Y, Z - different projections)");
+   
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // GLUT interface functions
@@ -577,6 +618,7 @@ void GLUTRedraw(void)
     // prologue
     glDisable(GL_LIGHTING);
 
+
     // draw neuron data bounding box
     if(show_bbox) {
         RNLoadRgb(RNwhite_rgb);
@@ -586,16 +628,21 @@ void GLUTRedraw(void)
     // draw machine labels and skeletons
     DrawSegmentations();
 
+    if(show_legend){
+        DrawLegend();
+    }
+
     // epilogue
     glEnable(GL_LIGHTING);
+
 
     // write the title
     char title[4096];
     if (show_merge_candidate) {
-        sprintf(title, "Skeleton Visualizer - %d\n", candidate_index);    
+        sprintf(title, "Skeleton Visualizer (Merge Candidates, %s) - %d\n", prefix, candidate_index);    
     }
     else {
-        sprintf(title, "Skeleton Visualizer - %lu\n", index_to_label[segmentation_index]);
+        sprintf(title, "Skeleton Visualizer (Single Neurons, %s) - %lu\n", prefix, index_to_label[segmentation_index]);
     }    
     glutSetWindowTitle(title);
 
@@ -772,6 +819,12 @@ void GLUTKeyboard(unsigned char key, int x, int y)
         case 'W':
         case 'w': {
             show_slice = (++show_slice) % 3;
+            break;
+        }
+
+        case 'L':
+        case 'l': {
+            show_legend = 1 - show_legend;
             break;
         }
 
